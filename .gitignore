@@ -8,3 +8,5 @@
 venv
 charts/**/charts
 .cr-*
+charts/keycloak/requirements.lock
+*.DS_Store

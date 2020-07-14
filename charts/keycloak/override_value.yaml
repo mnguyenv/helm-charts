@@ -1,0 +1,71 @@
+##init:
+#  image:
+#    repository: harbor.ssk8s.vibrenthealth.com/rh-sso-7/sso74-openshift-rhel8
+#    tag: 7.4
+#    pullPolicy: IfNotPresent
+keycloak:
+  replicas: 1
+  extraEnv: |
+    - name: JDBC_PARAMS
+      value: ?useSSL=false
+    - name: SSO_ADMIN_USERNAME
+      value: admin
+    - name: SSO_ADMIN_PASSWORD
+      value: admin
+    - name: JBOSS_HA_IP
+      value: 127.0.0.1
+  image:
+    repository:
+    tag: 35.0.0
+  ## Persistence configuration
+  persistence:
+    # The database vendor. Can be either "postgres", "mysql", "mariadb", or "h2"
+    dbVendor: mysql
+
+    ## The following values only apply if "deployPostgres" is set to "false"
+    dbName: keycloak
+    dbHost: keycloak-mysql-vibrent-mysql.default.svc.cluster.local
+    dbPort: 3306
+
+    ## Database Credentials are loaded from a Secret residing in the same Namespace as keycloak.
+    ## The Chart can read credentials from an existing Secret OR it can provision its own Secret.
+
+    ## Specify existing Secret
+    # If set, specifies the Name of an existing Secret to read db credentials from.
+    existingSecret: ""
+    existingSecretPasswordKey: ""  # read keycloak db password from existingSecret under this Key
+    existingSecretUsernameKey: ""  # read keycloak db user from existingSecret under this Key
+
+    ## Provision new Secret
+    # Only used if existingSecret is not specified. In this case a new secret is created
+    # populated by the variables below.
+    dbUser: keycloak
+    dbPassword: password
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app:  {{ template "keycloak.name" . }}
+              release: "{{ .Release.Name }}"
+            matchExpressions:
+              - key: role
+                operator: NotIn
+                values:
+                  - test
+          topologyKey: kubernetes.io/hostname
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app:  {{ template "keycloak.name" . }}
+                release: "{{ .Release.Name }}"
+              matchExpressions:
+                - key: role
+                  operator: NotIn
+                  values:
+                    - test
+            topologyKey: failure-domain.beta.kubernetes.io/zone
+test:
+  enabled: true
